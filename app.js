@@ -1,7 +1,10 @@
 // ======================================================
 // HackClubAI Web (GitHub Pages static)
-// - User pastes keys (stored in localStorage)
-// - Text + Image generation + optional Search grounding
+// ✅ Animated galaxy background (CSS)
+// ✅ Chat bubbles
+// ✅ Model cards grid
+// ✅ Filter that DOES NOT break selection
+// ✅ Enter = Run, Shift+Enter = newline
 // ======================================================
 
 const AI_BASE_URL = "https://ai.hackclub.com/proxy/v1";
@@ -53,7 +56,7 @@ const $ = (id) => document.getElementById(id);
 const runBtn = $("runBtn");
 const settingsBtn = $("settingsBtn");
 const promptEl = $("prompt");
-const outputEl = $("output");
+const chatEl = $("chat");
 const previewImg = $("previewImg");
 const previewPlaceholder = $("previewPlaceholder");
 const downloadLink = $("downloadLink");
@@ -65,8 +68,8 @@ const tabpages = {
   search: $("tab-search"),
 };
 
-const textModelList = $("textModelList");
-const imageModelList = $("imageModelList");
+const textModelGrid = $("textModelGrid");
+const imageModelGrid = $("imageModelGrid");
 const textDetail = $("textDetail");
 const imageDetail = $("imageDetail");
 
@@ -120,40 +123,51 @@ function applyTheme() {
   document.body.classList.toggle("light", state.theme === "light");
 }
 
-// ---------- UI builders ----------
-function modelItemHTML(m) {
+// ---------- Chat bubbles ----------
+function addBubble(kind, text) {
+  const div = document.createElement("div");
+  div.className = `bubble ${kind}`;
+  div.textContent = text;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
+
+function clearChat() {
+  chatEl.innerHTML = "";
+  setPreview("");
+  searchOut.textContent = "(none)";
+}
+
+function copyChat() {
+  const text = Array.from(chatEl.querySelectorAll(".bubble"))
+    .map(b => {
+      const who = b.classList.contains("user") ? "You" :
+                  b.classList.contains("assistant") ? "AI" : "Note";
+      return `${who}: ${b.textContent}`;
+    })
+    .join("\n\n");
+  return text;
+}
+
+// ---------- Model cards ----------
+function cardHTML(m) {
   const safeIcon = m.icon || "assets/icons/default.png";
   return `
-    <div class="item" data-id="${m.id}">
+    <div class="card" data-id="${m.id}" title="${m.id}">
       <img src="${safeIcon}" onerror="this.src='assets/icons/default.png'"/>
       <div class="meta">
-        <div class="name">${m.name} <span class="sub">• ${m.ctx}</span></div>
-        <div class="sub">${m.id}</div>
+        <div class="name">${m.name}</div>
+        <div class="sub">${m.ctx} • ${m.id}</div>
       </div>
     </div>
   `;
 }
 
-function renderTextModels(filter="") {
-  const f = filter.trim().toLowerCase();
-  const list = TEXT_MODELS.filter(m =>
-    !f || m.name.toLowerCase().includes(f) || m.id.toLowerCase().includes(f)
-  );
-  textModelList.innerHTML = list.map(modelItemHTML).join("");
-  selectInList(textModelList, state.textModel);
-  updateTextDetail(state.textModel);
-}
-
-function renderImageModels() {
-  imageModelList.innerHTML = IMAGE_MODELS.map(modelItemHTML).join("");
-  selectInList(imageModelList, state.imageModel);
-  updateImageDetail(state.imageModel);
-}
-
-function selectInList(container, id) {
-  container.querySelectorAll(".item").forEach(el => {
-    el.classList.toggle("selected", el.dataset.id === id);
-  });
+// IMPORTANT: selection must be reapplied after every render
+function selectCard(container, id) {
+  container.querySelectorAll(".card").forEach(el => el.classList.remove("selected"));
+  const match = container.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
+  if (match) match.classList.add("selected");
 }
 
 function updateTextDetail(id) {
@@ -168,14 +182,28 @@ function updateImageDetail(id) {
   imageDetail.textContent = `${m.name}\nModel: ${m.id}\nContext: ${m.ctx}\n\nBest for: ${m.best}`;
 }
 
-function setOutput(txt) {
-  outputEl.textContent = txt;
+function renderTextModels(filter = "") {
+  const f = filter.trim().toLowerCase();
+  const list = TEXT_MODELS.filter(m =>
+    !f || m.name.toLowerCase().includes(f) || m.id.toLowerCase().includes(f)
+  );
+
+  textModelGrid.innerHTML = list.map(cardHTML).join("");
+
+  // Re-apply highlight ONLY if the selected model is visible
+  selectCard(textModelGrid, state.textModel);
+
+  // Keep details tied to selection in state (not filtered list)
+  updateTextDetail(state.textModel);
 }
 
-function appendOutput(txt) {
-  outputEl.textContent += (outputEl.textContent ? "\n\n" : "") + txt;
+function renderImageModels() {
+  imageModelGrid.innerHTML = IMAGE_MODELS.map(cardHTML).join("");
+  selectCard(imageModelGrid, state.imageModel);
+  updateImageDetail(state.imageModel);
 }
 
+// ---------- Preview ----------
 function setPreview(dataUrl) {
   if (!dataUrl) {
     previewImg.style.display = "none";
@@ -195,7 +223,6 @@ tabs.forEach(btn => {
   btn.addEventListener("click", () => {
     tabs.forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
-
     state.activeTab = btn.dataset.tab;
     Object.values(tabpages).forEach(p => p.classList.remove("show"));
     tabpages[state.activeTab].classList.add("show");
@@ -206,7 +233,6 @@ tabs.forEach(btn => {
 function openModal() {
   modalBg.classList.remove("hidden");
   modal.classList.remove("hidden");
-
   aiKey.value = state.aiKey;
   searchKey.value = state.searchKey;
   theme.value = state.theme;
@@ -216,7 +242,6 @@ function closeModalFn() {
   modalBg.classList.add("hidden");
   modal.classList.add("hidden");
 }
-
 settingsBtn.addEventListener("click", openModal);
 closeModal.addEventListener("click", closeModalFn);
 modalBg.addEventListener("click", closeModalFn);
@@ -241,7 +266,7 @@ resetSettings.addEventListener("click", () => {
   location.reload();
 });
 
-// ---------- Controls state sync ----------
+// ---------- Controls sync ----------
 temp.value = String(state.temp);
 tempVal.textContent = state.temp.toFixed(1);
 temp.addEventListener("input", () => {
@@ -278,7 +303,6 @@ useSearch.addEventListener("change", () => {
   state.useSearch = useSearch.checked;
   localStorage.setItem(LS.useSearch, String(state.useSearch));
 });
-
 searchType.addEventListener("change", () => {
   state.searchType = searchType.value;
   localStorage.setItem(LS.searchType, state.searchType);
@@ -293,25 +317,40 @@ newsFreshness.addEventListener("change", () => {
   localStorage.setItem(LS.newsFresh, state.newsFresh);
 });
 
-textFilter.addEventListener("input", () => renderTextModels(textFilter.value));
+// Filter: renders but does NOT change selection
+textFilter.addEventListener("input", () => {
+  renderTextModels(textFilter.value);
+});
 
-// ---------- Click handling for model selection ----------
-textModelList.addEventListener("click", (e) => {
-  const item = e.target.closest(".item");
-  if (!item) return;
-  state.textModel = item.dataset.id;
+// ---------- Model selection click (event delegation = survives re-render) ----------
+textModelGrid.addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (!card) return;
+
+  state.textModel = card.dataset.id;
   localStorage.setItem(LS.textModel, state.textModel);
-  selectInList(textModelList, state.textModel);
+
+  selectCard(textModelGrid, state.textModel);
   updateTextDetail(state.textModel);
 });
 
-imageModelList.addEventListener("click", (e) => {
-  const item = e.target.closest(".item");
-  if (!item) return;
-  state.imageModel = item.dataset.id;
+imageModelGrid.addEventListener("click", (e) => {
+  const card = e.target.closest(".card");
+  if (!card) return;
+
+  state.imageModel = card.dataset.id;
   localStorage.setItem(LS.imageModel, state.imageModel);
-  selectInList(imageModelList, state.imageModel);
+
+  selectCard(imageModelGrid, state.imageModel);
   updateImageDetail(state.imageModel);
+});
+
+// ---------- Enter to Run ----------
+promptEl.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    runBtn.click();
+  }
 });
 
 // ---------- Search ----------
@@ -320,21 +359,16 @@ async function doSearch(query) {
 
   const headers = { "Authorization": `Bearer ${state.searchKey}` };
   let url = "";
+
   if (state.searchType === "news") {
-    const params = new URLSearchParams({
-      q: query,
-      freshness: state.newsFresh,
-    });
+    const params = new URLSearchParams({ q: query, freshness: state.newsFresh, count: String(state.searchCount) });
     url = `${SEARCH_BASE}/news/search?${params.toString()}`;
   } else {
-    const params = new URLSearchParams({
-      q: query,
-      count: String(state.searchCount),
-    });
+    const params = new URLSearchParams({ q: query, count: String(state.searchCount) });
     url = `${SEARCH_BASE}/web/search?${params.toString()}`;
   }
 
-  // NOTE: CORS must allow this from the browser. If Hack Club blocks CORS, this won't work on GitHub Pages.
+  // NOTE: If CORS is blocked, this will fail on GitHub Pages.
   const res = await fetch(url, { headers });
   if (!res.ok) throw new Error(`Search failed (${res.status})`);
   const data = await res.json();
@@ -358,9 +392,7 @@ async function callText(prompt, searchContext="") {
     "Content-Type": "application/json"
   };
 
-  const messages = [
-    { role: "system", content: state.systemPrompt }
-  ];
+  const messages = [{ role: "system", content: state.systemPrompt }];
 
   if (searchContext) {
     messages.push({
@@ -381,8 +413,7 @@ async function callText(prompt, searchContext="") {
   const res = await fetch(CHAT_COMPLETIONS_URL, { method:"POST", headers, body: JSON.stringify(payload) });
   if (!res.ok) throw new Error(`Text request failed (${res.status})`);
   const data = await res.json();
-  const msg = data?.choices?.[0]?.message?.content;
-  return (msg || "").trim();
+  return (data?.choices?.[0]?.message?.content || "").trim();
 }
 
 async function callImage(prompt) {
@@ -412,7 +443,6 @@ async function callImage(prompt) {
   const url = images[0]?.image_url?.url || "";
   if (!url) throw new Error("Image URL missing");
 
-  // Keep data URL as-is (best for browser preview)
   const dataUrl = url.includes("data:") ? url : `data:image/png;base64,${url}`;
   return { assistantText, dataUrl };
 }
@@ -421,30 +451,34 @@ async function callImage(prompt) {
 function requireKey() {
   if (!state.aiKey) {
     openModal();
-    alert("Paste your Hack Club AI key first.");
+    addBubble("sys", "Paste your Hack Club AI key in Settings first.");
     return false;
   }
   return true;
 }
 
-runBtn.addEventListener("click", async () => {
+async function run() {
   if (!requireKey()) return;
 
   const p = promptEl.value.trim();
-  if (!p) return alert("Type a prompt first.");
+  if (!p) {
+    addBubble("sys", "Type a prompt first.");
+    return;
+  }
 
   runBtn.disabled = true;
   runBtn.textContent = "Running…";
 
+  addBubble("user", p);
+
   try {
     if (state.activeTab === "image") {
-      appendOutput(`[${state.imageModel} | aspect=${state.aspect} | n=${state.imgCount}]`);
+      addBubble("sys", `Image: ${state.imageModel} • aspect=${state.aspect} • n=${state.imgCount}`);
       const { assistantText, dataUrl } = await callImage(p);
-      if (assistantText) appendOutput(assistantText);
+      if (assistantText) addBubble("assistant", assistantText);
       setPreview(dataUrl);
       searchOut.textContent = "(search is for Text mode)";
     } else {
-      // Text mode uses search optionally
       let ctx = "";
       if (state.useSearch && state.searchKey) {
         try {
@@ -458,33 +492,32 @@ runBtn.addEventListener("click", async () => {
         searchOut.textContent = "(search disabled or no search key)";
       }
 
-      appendOutput(`[${state.textModel} | temp=${state.temp.toFixed(1)}]`);
+      addBubble("sys", `Text: ${state.textModel} • temp=${state.temp.toFixed(1)}`);
       const ans = await callText(p, ctx);
-      appendOutput(ans || "(empty response)");
-      setPreview(""); // no image
+      addBubble("assistant", ans || "(empty response)");
+      setPreview("");
     }
   } catch (e) {
-    appendOutput(`Error: ${e.message}`);
+    addBubble("sys", `Error: ${e.message}`);
   } finally {
     runBtn.disabled = false;
     runBtn.textContent = "Run";
   }
-});
+}
+
+runBtn.addEventListener("click", run);
 
 // ---------- Copy/Clear ----------
 copyBtn.addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(outputEl.textContent || "");
+    await navigator.clipboard.writeText(copyChat());
+    addBubble("sys", "Copied chat to clipboard.");
   } catch {
-    alert("Copy failed (browser blocked clipboard).");
+    addBubble("sys", "Copy failed (browser blocked clipboard).");
   }
 });
 
-clearBtn.addEventListener("click", () => {
-  outputEl.textContent = "";
-  searchOut.textContent = "(none)";
-  setPreview("");
-});
+clearBtn.addEventListener("click", () => clearChat());
 
 // ---------- Init ----------
 function init() {
@@ -493,11 +526,10 @@ function init() {
   renderTextModels("");
   renderImageModels();
 
-  // Default details
   updateTextDetail(state.textModel);
   updateImageDetail(state.imageModel);
 
-  // First-run: ask for key
   if (!state.aiKey) openModal();
+  addBubble("sys", "Ready. Enter runs. Shift+Enter makes a new line.");
 }
 init();
