@@ -40,20 +40,20 @@ body{
 /* Star layers animate slowly for "alive" feeling */
 .stars-a{
   background-image:
-    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,.45) 50%, transparent 51%),
-    radial-gradient(1px 1px at 80% 25%, rgba(255,255,255,.35) 50%, transparent 51%),
-    radial-gradient(1px 1px at 25% 70%, rgba(255,255,255,.25) 50%, transparent 51%),
+    radial-gradient(2px 1px at 10% 15%, rgba(255,255,255,.45) 50%, transparent 51%),
+    radial-gradient(2px 1px at 80% 25%, rgba(255,255,255,.35) 50%, transparent 51%),
+    radial-gradient(3px 1px at 25% 70%, rgba(255,255,255,.25) 50%, transparent 51%),
     radial-gradient(1px 1px at 60% 80%, rgba(255,255,255,.25) 50%, transparent 51%),
-    radial-gradient(1px 1px at 40% 40%, rgba(255,255,255,.20) 50%, transparent 51%);
+    radial-gradient(4px 1px at 40% 40%, rgba(255,255,255,.20) 50%, transparent 51%);
   animation: starDriftA 38s linear infinite;
 }
 .stars-b{
   opacity:.25;
   background-image:
-    radial-gradient(1px 1px at 15% 35%, rgba(255,255,255,.25) 50%, transparent 51%),
-    radial-gradient(1px 1px at 65% 15%, rgba(255,255,255,.22) 50%, transparent 51%),
+    radial-gradient(2px 1px at 15% 35%, rgba(255,255,255,.25) 50%, transparent 51%),
+    radial-gradient(4px 1px at 65% 15%, rgba(255,255,255,.22) 50%, transparent 51%),
     radial-gradient(1px 1px at 85% 65%, rgba(255,255,255,.18) 50%, transparent 51%),
-    radial-gradient(1px 1px at 35% 85%, rgba(255,255,255,.18) 50%, transparent 51%);
+    radial-gradient(3px 1px at 35% 85%, rgba(255,255,255,.18) 50%, transparent 51%);
   animation: starDriftB 62s linear infinite;
 }
 
