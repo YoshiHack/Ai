@@ -1,0 +1,13 @@
+{
+  "summary": "",
+  "history": [
+    {
+      "role": "user",
+      "content": "what is the date"
+    },
+    {
+      "role": "assistant",
+      "content": "Today\u2019s date is Thursday, January 1, 2026.  \nSource: https://www.calendardate.com/todays.htm"
+    }
+  ]
+}

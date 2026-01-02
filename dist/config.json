@@ -1,0 +1,17 @@
+{
+  "mode": "light",
+  "accent": "Blue (Windows-ish)",
+  "font_size": 10,
+  "system_prompt": "You are a helpful assistant. Be accurate. If unsure, say so.",
+  "memory_enabled": true,
+  "memory_turns": 8,
+  "use_search": false,
+  "search_type": "web",
+  "search_count": 5,
+  "news_freshness": "pw",
+  "default_text_model": "qwen/qwen3-32b",
+  "default_temp": 0.7,
+  "default_image_model": "google/gemini-2.5-flash-image",
+  "default_aspect": "1:1",
+  "default_n": 1
+}

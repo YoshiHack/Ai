@@ -1,0 +1,18 @@
+{
+  "theme": "dark",
+  "system_prompt": "You are a helpful assistant. Be accurate. If unsure, say so.",
+  "default_text_model": "qwen/qwen3-32b",
+  "default_temp": 0.7,
+  "default_image_model": "google/gemini-2.5-flash-image",
+  "default_aspect": "1:1",
+  "default_n": 1,
+  "mode": "dark",
+  "accent": "Green",
+  "font_size": 10,
+  "memory_enabled": true,
+  "memory_turns": 8,
+  "use_search": true,
+  "search_type": "web",
+  "search_count": 5,
+  "news_freshness": "pw"
+}
