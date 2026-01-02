@@ -10,17 +10,18 @@
 <body>
   <!-- Galaxy background -->
   <div class="bg">
-    <div class="stars"></div>
+    <div class="stars stars-a"></div>
+    <div class="stars stars-b"></div>
     <div class="glow glow-a"></div>
     <div class="glow glow-b"></div>
   </div>
 
-  <header class="topbar">
+  <header class="topbar glass">
     <div class="brand">
       <img class="brand-icon" src="assets/app.png" alt="" onerror="this.style.display='none'">
       <div>
         <div class="brand-title">HackClubAI</div>
-        <div class="brand-sub">GitHub Pages (Bring-your-own-key)</div>
+        <div class="brand-sub">GitHub Pages • Bring-your-own-key</div>
       </div>
     </div>
     <div class="top-actions">
@@ -30,6 +31,7 @@
   </header>
 
   <main class="layout">
+    <!-- LEFT -->
     <section class="panel left glass">
       <div class="tabs">
         <button class="tab active" data-tab="text">Text</button>
@@ -39,11 +41,12 @@
 
       <!-- TEXT -->
       <div class="tabpage show" id="tab-text">
-        <div class="section-title">Text model</div>
-        <div class="row">
-          <input id="textFilter" class="input" placeholder="Filter models..." />
+        <div class="section-head">
+          <div class="section-title">Text models</div>
+          <input id="textFilter" class="input compact" placeholder="Filter..." />
         </div>
-        <div id="textModelList" class="list"></div>
+
+        <div id="textModelGrid" class="grid"></div>
 
         <div class="section-title">Temperature</div>
         <div class="row">
@@ -51,7 +54,7 @@
           <div class="pill"><span id="tempVal"></span></div>
         </div>
         <div class="hint">
-          Low = consistent/factual. High = more creative/varied (also more likely to be wrong).
+          Low = consistent/factual. High = creative/varied (also more mistakes).
         </div>
 
         <div class="section-title">Model info</div>
@@ -60,8 +63,8 @@
 
       <!-- IMAGE -->
       <div class="tabpage" id="tab-image">
-        <div class="section-title">Image model</div>
-        <div id="imageModelList" class="list"></div>
+        <div class="section-title">Image models</div>
+        <div id="imageModelGrid" class="grid"></div>
 
         <div class="section-title">Aspect ratio</div>
         <div class="row">
@@ -71,7 +74,7 @@
 
         <div class="section-title">Count</div>
         <div class="row">
-          <input id="imgCount" type="number" min="1" max="4" step="1" class="input" style="width:110px">
+          <input id="imgCount" type="number" min="1" max="4" step="1" class="input" style="width:120px">
           <div class="hint">1–4 images (some models may limit output).</div>
         </div>
 
@@ -81,7 +84,7 @@
 
       <!-- SEARCH -->
       <div class="tabpage" id="tab-search">
-        <div class="section-title">Grounding (for Text mode)</div>
+        <div class="section-title">Grounding (Text mode)</div>
         <label class="check">
           <input id="useSearch" type="checkbox">
           <span>Use Hack Club Search results to ground answers</span>
@@ -97,7 +100,7 @@
 
         <div class="row">
           <label class="label">Count</label>
-          <input id="searchCount" type="number" min="1" max="10" step="1" class="input" style="width:110px">
+          <input id="searchCount" type="number" min="1" max="10" step="1" class="input" style="width:120px">
         </div>
 
         <div class="row">
@@ -110,28 +113,31 @@
           </select>
         </div>
 
-        <div class="hint">
-          Search key is optional. If missing, search won’t run.
-        </div>
+        <div class="hint">Search key is optional. If missing, search won’t run.</div>
 
         <div class="section-title">Last search context</div>
         <pre id="searchOut" class="codebox">(none)</pre>
       </div>
     </section>
 
+    <!-- RIGHT -->
     <section class="panel right glass">
-      <div class="section-title">Prompt</div>
+      <div class="section-head">
+        <div class="section-title">Prompt</div>
+        <div class="hint">Enter = Run • Shift+Enter = New line</div>
+      </div>
+
       <textarea id="prompt" class="textarea" placeholder="Type your prompt..."></textarea>
 
       <div class="row spread">
-        <div class="section-title">Output</div>
+        <div class="section-title">Chat</div>
         <div class="row" style="gap:8px">
           <button id="copyBtn" class="btn ghost">Copy</button>
           <button id="clearBtn" class="btn ghost">Clear</button>
         </div>
       </div>
 
-      <pre id="output" class="codebox"></pre>
+      <div id="chat" class="chat"></div>
 
       <div class="section-title">Image preview</div>
       <div class="preview">
@@ -170,7 +176,7 @@
         <option value="light">Light (Higher contrast)</option>
       </select>
 
-      <label class="label">System prompt (instructions)</label>
+      <label class="label">System prompt (instructions / “memory-lite”)</label>
       <textarea id="systemPrompt" class="textarea small"></textarea>
 
       <div class="row">
