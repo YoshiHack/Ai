@@ -1,513 +1,472 @@
-// ======================================================
-// HackClubAI Web (GitHub Pages static)
-// ✅ Animated galaxy background (CSS)
-// ✅ Chat bubbles
-// ✅ Model cards grid
-// ✅ NO FILTER (removed entirely)
-// ✅ Enter = Run, Shift+Enter = newline
-// ======================================================
+:root{
+  --bg0:#060815;
+  --bg1:#0c1230;
+  --bg2:#151a44;
 
-const AI_BASE_URL = "https://ai.hackclub.com/proxy/v1";
-const CHAT_COMPLETIONS_URL = `${AI_BASE_URL}/chat/completions`;
-const SEARCH_BASE = "https://search.hackclub.com/res/v1";
+  --text:#eef1ff;
+  --muted:#b5bed8;
 
-const LS = {
-  aiKey: "hc_ai_key",
-  searchKey: "hc_search_key",
-  theme: "hc_theme",
-  sysPrompt: "hc_system_prompt",
-  textModel: "hc_text_model",
-  temp: "hc_temp",
-  imageModel: "hc_image_model",
-  aspect: "hc_aspect",
-  imgCount: "hc_img_count",
-  useSearch: "hc_use_search",
-  searchType: "hc_search_type",
-  searchCount: "hc_search_count",
-  newsFresh: "hc_news_freshness",
-};
+  /* GLASS */
+  --card: rgba(10, 12, 22, .50);       /* was too opaque */
+  --card2: rgba(18, 22, 42, .38);
+  --border: rgba(120, 130, 255, .30);
 
-const TEXT_MODELS = [
-  { id:"qwen/qwen3-32b", name:"Qwen 3 32B", ctx:"41K", best:"Fast daily driver for chat + coding.", icon:"assets/icons/qwen.png" },
-  { id:"moonshotai/kimi-k2-thinking", name:"Kimi K2 Thinking", ctx:"262K", best:"Long-context reasoning + big docs.", icon:"assets/icons/moonshot.png" },
-  { id:"openai/gpt-oss-120b", name:"gpt-oss-120b", ctx:"131K", best:"Heavy prompts (slower).", icon:"assets/icons/openai.png" },
-  { id:"moonshotai/kimi-k2-0905", name:"Kimi K2 0905", ctx:"262K", best:"Long-context general model.", icon:"assets/icons/moonshot.png" },
-  { id:"google/gemini-3-flash-preview", name:"Gemini 3 Flash Preview", ctx:"1.0M", best:"Huge context + fast.", icon:"assets/icons/gemini.png" },
-  { id:"qwen/qwen3-next-80b-a3b-instruct", name:"Qwen 3 Next 80B", ctx:"262K", best:"Stronger reasoning / harder coding.", icon:"assets/icons/qwen.png" },
-  { id:"z-ai/glm-4.7", name:"GLM 4.7", ctx:"203K", best:"Strong general reasoning.", icon:"assets/icons/zai.png" },
-  { id:"deepseek/deepseek-v3.2-speciale", name:"DeepSeek V3.2 Speciale", ctx:"164K", best:"Strong technical/code tasks.", icon:"assets/icons/deepseek.png" },
-  { id:"deepseek/deepseek-v3.2", name:"DeepSeek V3.2", ctx:"164K", best:"Good balance.", icon:"assets/icons/deepseek.png" },
-  { id:"x-ai/grok-4.1-fast", name:"Grok 4.1 Fast", ctx:"2.0M", best:"Massive context, fast.", icon:"assets/icons/grok.png" },
-  { id:"google/gemini-2.5-flash", name:"Gemini 2.5 Flash", ctx:"1.0M", best:"Huge context + speed.", icon:"assets/icons/gemini.png" },
-  { id:"openai/gpt-5.1", name:"GPT-5.1", ctx:"400K", best:"Higher quality reasoning/writing.", icon:"assets/icons/openai.png" },
-  { id:"openai/gpt-5-mini", name:"GPT-5 Mini", ctx:"400K", best:"Fast general Q&A.", icon:"assets/icons/openai.png" },
-];
+  /* ACCENT */
+  --accent:#7c3aed;
+  --accent2:#3b82f6;
 
-const IMAGE_MODELS = [
-  { id:"google/gemini-2.5-flash-image", name:"Gemini 2.5 Flash Image", ctx:"33K", best:"Fast image iterations.", icon:"assets/icons/gemini.png" },
-  { id:"google/gemini-3-pro-image-preview", name:"Gemini 3 Pro Image Preview", ctx:"66K", best:"Higher quality, slower.", icon:"assets/icons/gemini.png" },
-];
-
-const ASPECTS = ["1:1","2:3","3:2","3:4","4:3","4:5","5:4","9:16","16:9","21:9"];
-
-// ---------- DOM ----------
-const $ = (id) => document.getElementById(id);
-
-const runBtn = $("runBtn");
-const settingsBtn = $("settingsBtn");
-const promptEl = $("prompt");
-const chatEl = $("chat");
-const previewImg = $("previewImg");
-const previewPlaceholder = $("previewPlaceholder");
-const downloadLink = $("downloadLink");
-
-const tabs = Array.from(document.querySelectorAll(".tab"));
-const tabpages = {
-  text: $("tab-text"),
-  image: $("tab-image"),
-  search: $("tab-search"),
-};
-
-const textModelGrid = $("textModelGrid");
-const imageModelGrid = $("imageModelGrid");
-const textDetail = $("textDetail");
-const imageDetail = $("imageDetail");
-
-const temp = $("temp");
-const tempVal = $("tempVal");
-const aspect = $("aspect");
-const imgCount = $("imgCount");
-
-const useSearch = $("useSearch");
-const searchType = $("searchType");
-const searchCount = $("searchCount");
-const newsFreshness = $("newsFreshness");
-const searchOut = $("searchOut");
-
-const copyBtn = $("copyBtn");
-const clearBtn = $("clearBtn");
-
-// Modal
-const modalBg = $("modalBg");
-const modal = $("modal");
-const closeModal = $("closeModal");
-const aiKey = $("aiKey");
-const searchKey = $("searchKey");
-const theme = $("theme");
-const systemPrompt = $("systemPrompt");
-const saveSettings = $("saveSettings");
-const resetSettings = $("resetSettings");
-
-// ---------- State ----------
-let state = {
-  activeTab: "text",
-  aiKey: localStorage.getItem(LS.aiKey) || "",
-  searchKey: localStorage.getItem(LS.searchKey) || "",
-  theme: localStorage.getItem(LS.theme) || "dark",
-  systemPrompt: localStorage.getItem(LS.sysPrompt) || "You are a helpful assistant. Be accurate. If unsure, say so.",
-  textModel: localStorage.getItem(LS.textModel) || TEXT_MODELS[0].id,
-  temp: parseFloat(localStorage.getItem(LS.temp) || "0.7"),
-  imageModel: localStorage.getItem(LS.imageModel) || IMAGE_MODELS[0].id,
-  aspect: localStorage.getItem(LS.aspect) || "1:1",
-  imgCount: parseInt(localStorage.getItem(LS.imgCount) || "1", 10),
-
-  useSearch: (localStorage.getItem(LS.useSearch) || "false") === "true",
-  searchType: localStorage.getItem(LS.searchType) || "web",
-  searchCount: parseInt(localStorage.getItem(LS.searchCount) || "5", 10),
-  newsFresh: localStorage.getItem(LS.newsFresh) || "pw",
-};
-
-function applyTheme() {
-  document.body.classList.toggle("light", state.theme === "light");
+  /* LIGHT THEME */
+  --lightBgA:#e6eaf6;
+  --lightBgB:#f8fbff;
+  --lightText:#0f172a;
+  --lightMuted:#44506b;
+  --lightCard: rgba(255,255,255,.72);
+  --lightBorder: rgba(30,64,175,.22);
 }
 
-// ---------- Chat bubbles ----------
-function addBubble(kind, text) {
-  const div = document.createElement("div");
-  div.className = `bubble ${kind}`;
-  div.textContent = text;
-  chatEl.appendChild(div);
-  chatEl.scrollTop = chatEl.scrollHeight;
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:"Segoe UI",system-ui,-apple-system,Arial,sans-serif;
+  color:var(--text);
+  overflow-x:hidden;
 }
 
-function clearChat() {
-  chatEl.innerHTML = "";
-  setPreview("");
-  searchOut.textContent = "(none)";
+/* =========================
+   GALAXY / NEBULA BACKGROUND
+   ========================= */
+.bg{
+  position:fixed; inset:0;
+  background:
+    radial-gradient(1200px 900px at 20% 20%, rgba(124,58,237,.40), transparent 60%),
+    radial-gradient(1000px 800px at 80% 70%, rgba(59,130,246,.35), transparent 60%),
+    linear-gradient(135deg, var(--bg0), var(--bg1) 35%, var(--bg2) 70%, var(--bg0));
+  z-index:-5;
+  overflow:hidden;
 }
 
-function copyChat() {
-  return Array.from(chatEl.querySelectorAll(".bubble"))
-    .map(b => {
-      const who = b.classList.contains("user") ? "You" :
-                  b.classList.contains("assistant") ? "AI" : "Note";
-      return `${who}: ${b.textContent}`;
-    })
-    .join("\n\n");
+/* Animated nebula haze */
+.bg::before{
+  content:"";
+  position:absolute; inset:-40%;
+  background:
+    radial-gradient(600px 500px at 30% 40%, rgba(124,58,237,.32), transparent 60%),
+    radial-gradient(700px 500px at 70% 60%, rgba(59,130,246,.28), transparent 62%),
+    radial-gradient(500px 420px at 55% 30%, rgba(236,72,153,.16), transparent 65%);
+  filter: blur(60px);
+  opacity:.85;
+  animation: nebulaDrift 18s ease-in-out infinite alternate;
 }
 
-// ---------- Model cards ----------
-function cardHTML(m) {
-  const safeIcon = m.icon || "assets/icons/default.png";
-  return `
-    <div class="card" data-id="${m.id}" title="${m.id}">
-      <img src="${safeIcon}" onerror="this.src='assets/icons/default.png'"/>
-      <div class="meta">
-        <div class="name">${m.name}</div>
-        <div class="sub">${m.ctx} • ${m.id}</div>
-      </div>
-    </div>
-  `;
+@keyframes nebulaDrift{
+  0%   { transform: translate3d(-2%, -1%, 0) scale(1.02); }
+  50%  { transform: translate3d(2%,  2%, 0) scale(1.05); }
+  100% { transform: translate3d(-1%, 3%, 0) scale(1.03); }
 }
 
-function selectCard(container, id) {
-  container.querySelectorAll(".card").forEach(el => el.classList.remove("selected"));
-  const match = container.querySelector(`.card[data-id="${CSS.escape(id)}"]`);
-  if (match) match.classList.add("selected");
+/* Shimmer/noise overlay */
+.bg::after{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    repeating-linear-gradient(
+      120deg,
+      rgba(255,255,255,.06) 0px,
+      rgba(255,255,255,.02) 2px,
+      rgba(255,255,255,0) 6px
+    );
+  opacity:.12;
+  mix-blend-mode: overlay;
+  animation: shimmer 7s linear infinite;
+}
+@keyframes shimmer{
+  from{ transform: translateX(-14%); }
+  to{ transform: translateX(14%); }
 }
 
-function updateTextDetail(id) {
-  const m = TEXT_MODELS.find(x => x.id === id);
-  if (!m) return;
-  textDetail.textContent = `${m.name}\nModel: ${m.id}\nContext: ${m.ctx}\n\nBest for: ${m.best}`;
+/* Stars */
+.stars{
+  position:absolute; inset:-80px;
+  opacity:.50;
+  background-repeat:repeat;
+  background-size: 520px 520px;
+  filter: blur(.15px);
+}
+.stars-a{
+  background-image:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,.55) 50%, transparent 51%),
+    radial-gradient(1px 1px at 80% 25%, rgba(255,255,255,.40) 50%, transparent 51%),
+    radial-gradient(1px 1px at 25% 70%, rgba(255,255,255,.35) 50%, transparent 51%),
+    radial-gradient(1px 1px at 60% 80%, rgba(255,255,255,.28) 50%, transparent 51%),
+    radial-gradient(1px 1px at 40% 40%, rgba(255,255,255,.25) 50%, transparent 51%);
+  animation: starDriftA 40s linear infinite;
+}
+.stars-b{
+  opacity:.28;
+  background-image:
+    radial-gradient(1px 1px at 15% 35%, rgba(255,255,255,.30) 50%, transparent 51%),
+    radial-gradient(1px 1px at 65% 15%, rgba(255,255,255,.26) 50%, transparent 51%),
+    radial-gradient(1px 1px at 85% 65%, rgba(255,255,255,.22) 50%, transparent 51%),
+    radial-gradient(1px 1px at 35% 85%, rgba(255,255,255,.22) 50%, transparent 51%);
+  animation: starDriftB 70s linear infinite;
+}
+@keyframes starDriftA{
+  from { transform: translate3d(0,0,0); }
+  to   { transform: translate3d(-260px, 160px, 0); }
+}
+@keyframes starDriftB{
+  from { transform: translate3d(0,0,0); }
+  to   { transform: translate3d(220px, -180px, 0); }
 }
 
-function updateImageDetail(id) {
-  const m = IMAGE_MODELS.find(x => x.id === id);
-  if (!m) return;
-  imageDetail.textContent = `${m.name}\nModel: ${m.id}\nContext: ${m.ctx}\n\nBest for: ${m.best}`;
+/* Extra glow blobs (more visible now) */
+.glow{
+  position:absolute;
+  width:620px; height:620px;
+  border-radius:999px;
+  filter: blur(80px);
+  opacity:.60;
+  z-index:-4;
+  animation: glowPulse 8s ease-in-out infinite;
+}
+.glow-a{left:-200px; top:120px; background: radial-gradient(circle, rgba(124,58,237,.95), transparent 62%);}
+.glow-b{right:-220px; bottom:-140px; background: radial-gradient(circle, rgba(59,130,246,.95), transparent 62%);}
+@keyframes glowPulse{
+  0%,100% { opacity:.50; transform: scale(1); }
+  50%     { opacity:.72; transform: scale(1.06); }
 }
 
-function renderTextModels() {
-  textModelGrid.innerHTML = TEXT_MODELS.map(cardHTML).join("");
-  selectCard(textModelGrid, state.textModel);
-  updateTextDetail(state.textModel);
+/* =========================
+   LAYOUT / GLASS UI
+   ========================= */
+.topbar{
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 18px;
+  gap:12px;
+  margin: 12px 18px 0;
+  border-radius:18px;
 }
 
-function renderImageModels() {
-  imageModelGrid.innerHTML = IMAGE_MODELS.map(cardHTML).join("");
-  selectCard(imageModelGrid, state.imageModel);
-  updateImageDetail(state.imageModel);
+.layout{
+  display:grid;
+  grid-template-columns: 440px 1fr;
+  gap:14px;
+  padding: 14px 18px 18px;
 }
 
-// ---------- Preview ----------
-function setPreview(dataUrl) {
-  if (!dataUrl) {
-    previewImg.style.display = "none";
-    previewPlaceholder.style.display = "block";
-    downloadLink.style.display = "none";
-    return;
-  }
-  previewImg.src = dataUrl;
-  previewImg.style.display = "block";
-  previewPlaceholder.style.display = "none";
-  downloadLink.href = dataUrl;
-  downloadLink.style.display = "inline-flex";
+.panel{border-radius:18px}
+
+/* Real glass */
+.glass{
+  background: linear-gradient(180deg, var(--card), var(--card2));
+  border:1px solid var(--border);
+  box-shadow: 0 20px 70px rgba(0,0,0,.35);
+  backdrop-filter: blur(12px);
 }
 
-// ---------- Tabs ----------
-tabs.forEach(btn => {
-  btn.addEventListener("click", () => {
-    tabs.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    state.activeTab = btn.dataset.tab;
-    Object.values(tabpages).forEach(p => p.classList.remove("show"));
-    tabpages[state.activeTab].classList.add("show");
-  });
-});
+/* Brand */
+.brand{display:flex; align-items:center; gap:12px;}
+.brand-icon{width:38px;height:38px;border-radius:12px}
+.brand-title{font-size:18px;font-weight:900;letter-spacing:.2px}
+.brand-sub{font-size:12px;color:var(--muted)}
 
-// ---------- Modal ----------
-function openModal() {
-  modalBg.classList.remove("hidden");
-  modal.classList.remove("hidden");
-  aiKey.value = state.aiKey;
-  searchKey.value = state.searchKey;
-  theme.value = state.theme;
-  systemPrompt.value = state.systemPrompt;
+.left{padding:14px}
+.right{padding:14px; display:flex; flex-direction:column; gap:10px;}
+
+/* Tabs */
+.tabs{display:flex; gap:8px; margin-bottom:12px;}
+.tab{
+  flex:1;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(30,41,59,.36);
+  color: #e0e7ff;
+  cursor:pointer;
+  font-weight:900;
+  transition: filter .12s ease, transform .12s ease;
 }
-function closeModalFn() {
-  modalBg.classList.add("hidden");
-  modal.classList.add("hidden");
-}
-settingsBtn.addEventListener("click", openModal);
-closeModal.addEventListener("click", closeModalFn);
-modalBg.addEventListener("click", closeModalFn);
-
-saveSettings.addEventListener("click", () => {
-  state.aiKey = aiKey.value.trim();
-  state.searchKey = searchKey.value.trim();
-  state.theme = theme.value;
-  state.systemPrompt = systemPrompt.value.trim() || "You are a helpful assistant. Be accurate. If unsure, say so.";
-
-  localStorage.setItem(LS.aiKey, state.aiKey);
-  localStorage.setItem(LS.searchKey, state.searchKey);
-  localStorage.setItem(LS.theme, state.theme);
-  localStorage.setItem(LS.sysPrompt, state.systemPrompt);
-
-  applyTheme();
-  closeModalFn();
-});
-
-resetSettings.addEventListener("click", () => {
-  localStorage.clear();
-  location.reload();
-});
-
-// ---------- Controls sync ----------
-temp.value = String(state.temp);
-tempVal.textContent = state.temp.toFixed(1);
-temp.addEventListener("input", () => {
-  state.temp = parseFloat(temp.value);
-  tempVal.textContent = state.temp.toFixed(1);
-  localStorage.setItem(LS.temp, String(state.temp));
-});
-
-ASPECTS.forEach(a => {
-  const opt = document.createElement("option");
-  opt.value = a;
-  opt.textContent = a;
-  aspect.appendChild(opt);
-});
-aspect.value = state.aspect;
-aspect.addEventListener("change", () => {
-  state.aspect = aspect.value;
-  localStorage.setItem(LS.aspect, state.aspect);
-});
-
-imgCount.value = String(state.imgCount);
-imgCount.addEventListener("change", () => {
-  state.imgCount = Math.max(1, Math.min(4, parseInt(imgCount.value || "1", 10)));
-  imgCount.value = String(state.imgCount);
-  localStorage.setItem(LS.imgCount, String(state.imgCount));
-});
-
-useSearch.checked = state.useSearch;
-searchType.value = state.searchType;
-searchCount.value = String(state.searchCount);
-newsFreshness.value = state.newsFresh;
-
-useSearch.addEventListener("change", () => {
-  state.useSearch = useSearch.checked;
-  localStorage.setItem(LS.useSearch, String(state.useSearch));
-});
-searchType.addEventListener("change", () => {
-  state.searchType = searchType.value;
-  localStorage.setItem(LS.searchType, state.searchType);
-});
-searchCount.addEventListener("change", () => {
-  state.searchCount = Math.max(1, Math.min(10, parseInt(searchCount.value || "5", 10)));
-  searchCount.value = String(state.searchCount);
-  localStorage.setItem(LS.searchCount, String(state.searchCount));
-});
-newsFreshness.addEventListener("change", () => {
-  state.newsFresh = newsFreshness.value;
-  localStorage.setItem(LS.newsFresh, state.newsFresh);
-});
-
-// ---------- Model selection click (event delegation = survives any re-render) ----------
-textModelGrid.addEventListener("click", (e) => {
-  const card = e.target.closest(".card");
-  if (!card) return;
-  state.textModel = card.dataset.id;
-  localStorage.setItem(LS.textModel, state.textModel);
-  selectCard(textModelGrid, state.textModel);
-  updateTextDetail(state.textModel);
-});
-
-imageModelGrid.addEventListener("click", (e) => {
-  const card = e.target.closest(".card");
-  if (!card) return;
-  state.imageModel = card.dataset.id;
-  localStorage.setItem(LS.imageModel, state.imageModel);
-  selectCard(imageModelGrid, state.imageModel);
-  updateImageDetail(state.imageModel);
-});
-
-// ---------- Enter to Run ----------
-promptEl.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    runBtn.click();
-  }
-});
-
-// ---------- Search ----------
-async function doSearch(query) {
-  if (!state.searchKey) return "";
-
-  const headers = { "Authorization": `Bearer ${state.searchKey}` };
-  let url = "";
-
-  if (state.searchType === "news") {
-    const params = new URLSearchParams({ q: query, freshness: state.newsFresh, count: String(state.searchCount) });
-    url = `${SEARCH_BASE}/news/search?${params.toString()}`;
-  } else {
-    const params = new URLSearchParams({ q: query, count: String(state.searchCount) });
-    url = `${SEARCH_BASE}/web/search?${params.toString()}`;
-  }
-
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error(`Search failed (${res.status})`);
-  const data = await res.json();
-
-  const bucket = (state.searchType === "news" ? data.news : data.web) || {};
-  const results = bucket.results || [];
-  const lines = results.slice(0, state.searchCount).map((r, i) => {
-    const t = r.title || "Untitled";
-    const u = r.url || "";
-    const d = r.description || r.snippet || "";
-    return `${i+1}. ${t}\n${u}\n${d}`.trim();
-  });
-
-  return lines.join("\n\n").trim();
+.tab:hover{filter:brightness(1.07); transform: translateY(-1px)}
+.tab.active{
+  background: rgba(124,58,237,.30);
+  border-color: rgba(124,58,237,.55);
+  box-shadow: 0 12px 34px rgba(124,58,237,.22);
 }
 
-// ---------- AI Calls ----------
-async function callText(prompt, searchContext="") {
-  const headers = {
-    "Authorization": `Bearer ${state.aiKey}`,
-    "Content-Type": "application/json"
-  };
+.tabpage{display:none}
+.tabpage.show{display:block}
 
-  const messages = [{ role: "system", content: state.systemPrompt }];
+.section-title{
+  margin-top:10px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.row{display:flex; gap:10px; align-items:center; margin:8px 0}
+.row.spread{justify-content:space-between}
 
-  if (searchContext) {
-    messages.push({
-      role: "system",
-      content: "Use these search results to answer accurately. If you use a fact, cite the URL.\n\nSEARCH RESULTS:\n" + searchContext
-    });
-  }
+.label{min-width:110px; color:var(--muted); font-size:12px}
 
-  messages.push({ role: "user", content: prompt });
+/* Inputs */
+.input,.select,.textarea{
+  width:100%;
+  background: rgba(8,10,18,.48);
+  color: var(--text);
+  border:1px solid rgba(120,130,255,.26);
+  border-radius:16px;
+  padding:10px 12px;
+  outline:none;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.select{cursor:pointer}
+.textarea{min-height:140px; resize:vertical}
+.textarea.small{min-height:110px}
 
-  const payload = {
-    model: state.textModel,
-    messages,
-    temperature: state.temp,
-    stream: false
-  };
+.hint{color:var(--muted); font-size:12px; line-height:1.35}
 
-  const res = await fetch(CHAT_COMPLETIONS_URL, { method:"POST", headers, body: JSON.stringify(payload) });
-  if (!res.ok) throw new Error(`Text request failed (${res.status})`);
-  const data = await res.json();
-  return (data?.choices?.[0]?.message?.content || "").trim();
+.detail{
+  margin-top:8px;
+  padding:10px 12px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(8,10,18,.34);
+  color:#e6ebff;
+  white-space:pre-wrap;
 }
 
-async function callImage(prompt) {
-  const headers = {
-    "Authorization": `Bearer ${state.aiKey}`,
-    "Content-Type": "application/json"
-  };
+/* Model cards */
+.grid{
+  margin-top:8px;
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+.card{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  background: rgba(8,10,18,.35);
+  padding:10px;
+  cursor:pointer;
+  transition: transform .12s ease, filter .12s ease, border-color .12s ease, box-shadow .12s ease;
+  display:flex;
+  gap:10px;
+}
+.card:hover{
+  transform: translateY(-1px);
+  filter: brightness(1.10);
+}
+.card.selected{
+  border-color: rgba(124,58,237,.65);
+  box-shadow: 0 14px 40px rgba(124,58,237,.20);
+}
+.card img{width:30px;height:30px;border-radius:10px}
+.card .meta{display:flex; flex-direction:column; gap:2px; min-width:0}
+.card .name{font-weight:900; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.card .sub{font-size:12px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 
-  const payload = {
-    model: state.imageModel,
-    messages: [{ role:"user", content: prompt }],
-    modalities: ["image","text"],
-    image_config: { aspect_ratio: state.aspect },
-    stream: false,
-    n: state.imgCount
-  };
-
-  const res = await fetch(CHAT_COMPLETIONS_URL, { method:"POST", headers, body: JSON.stringify(payload) });
-  if (!res.ok) throw new Error(`Image request failed (${res.status})`);
-  const data = await res.json();
-
-  const message = data?.choices?.[0]?.message || {};
-  const assistantText = (message.content || "").trim();
-  const images = message.images || [];
-  if (!images.length) throw new Error("No images returned");
-
-  const url = images[0]?.image_url?.url || "";
-  if (!url) throw new Error("Image URL missing");
-
-  const dataUrl = url.includes("data:") ? url : `data:image/png;base64,${url}`;
-  return { assistantText, dataUrl };
+.pill{
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(120,130,255,.26);
+  background: rgba(8,10,18,.35);
+  color:#e6ebff;
+  font-weight:900;
+  min-width:54px;
+  text-align:center;
 }
 
-// ---------- Run ----------
-function requireKey() {
-  if (!state.aiKey) {
-    openModal();
-    addBubble("sys", "Paste your Hack Club AI key in Settings first.");
-    return false;
-  }
-  return true;
+.btn{
+  border-radius:16px;
+  padding:10px 14px;
+  border:1px solid rgba(255,255,255,.12);
+  background: rgba(30,41,59,.30);
+  color:#e6ebff;
+  cursor:pointer;
+  font-weight:900;
+  transition: transform .12s ease, filter .12s ease;
+}
+.btn:hover{filter:brightness(1.08); transform: translateY(-1px)}
+.btn.primary{
+  border:none;
+  background: linear-gradient(90deg, rgba(124,58,237,.95), rgba(99,102,241,.95), rgba(59,130,246,.95));
+  color:white;
+  box-shadow: 0 14px 44px rgba(99,102,241,.22);
+}
+.btn.ghost{background: rgba(30,41,59,.22)}
+
+.codebox{
+  margin:0;
+  padding:12px;
+  border-radius:16px;
+  border:1px solid rgba(120,130,255,.24);
+  background: rgba(8,10,18,.35);
+  color:#eef1ff;
+  overflow:auto;
+  min-height:160px;
+  white-space:pre-wrap;
 }
 
-async function run() {
-  if (!requireKey()) return;
-
-  const p = promptEl.value.trim();
-  if (!p) {
-    addBubble("sys", "Type a prompt first.");
-    return;
-  }
-
-  runBtn.disabled = true;
-  runBtn.textContent = "Running…";
-
-  addBubble("user", p);
-
-  try {
-    if (state.activeTab === "image") {
-      addBubble("sys", `Image: ${state.imageModel} • aspect=${state.aspect} • n=${state.imgCount}`);
-      const { assistantText, dataUrl } = await callImage(p);
-      if (assistantText) addBubble("assistant", assistantText);
-      setPreview(dataUrl);
-      searchOut.textContent = "(search is for Text mode)";
-    } else {
-      let ctx = "";
-      if (state.useSearch && state.searchKey) {
-        try {
-          ctx = await doSearch(p);
-          searchOut.textContent = ctx || "(no search results)";
-        } catch (e) {
-          searchOut.textContent = `(search failed: ${e.message})`;
-          ctx = "";
-        }
-      } else {
-        searchOut.textContent = "(search disabled or no search key)";
-      }
-
-      addBubble("sys", `Text: ${state.textModel} • temp=${state.temp.toFixed(1)}`);
-      const ans = await callText(p, ctx);
-      addBubble("assistant", ans || "(empty response)");
-      setPreview("");
-    }
-  } catch (e) {
-    addBubble("sys", `Error: ${e.message}`);
-  } finally {
-    runBtn.disabled = false;
-    runBtn.textContent = "Run";
-  }
+/* Chat */
+.chat{
+  border-radius:18px;
+  border:1px solid rgba(120,130,255,.24);
+  background: rgba(8,10,18,.28);
+  padding:12px;
+  overflow:auto;
+  min-height:260px;
+  max-height:420px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.bubble{
+  max-width: 92%;
+  padding:10px 12px;
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.10);
+  white-space:pre-wrap;
+  line-height:1.35;
+}
+.bubble.user{
+  align-self:flex-end;
+  background: rgba(59,130,246,.12);
+  border-color: rgba(59,130,246,.22);
+}
+.bubble.assistant{
+  align-self:flex-start;
+  background: rgba(124,58,237,.12);
+  border-color: rgba(124,58,237,.22);
+}
+.bubble.sys{
+  align-self:center;
+  background: rgba(245,158,11,.10);
+  border-color: rgba(245,158,11,.22);
+  color:#fde68a;
+  font-weight:900;
 }
 
-runBtn.addEventListener("click", run);
-
-// ---------- Copy/Clear ----------
-copyBtn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(copyChat());
-    addBubble("sys", "Copied chat to clipboard.");
-  } catch {
-    addBubble("sys", "Copy failed (browser blocked clipboard).");
-  }
-});
-
-clearBtn.addEventListener("click", () => clearChat());
-
-// ---------- Init ----------
-function init() {
-  applyTheme();
-
-  renderTextModels();
-  renderImageModels();
-
-  updateTextDetail(state.textModel);
-  updateImageDetail(state.imageModel);
-
-  if (!state.aiKey) openModal();
-  addBubble("sys", "Ready. Enter runs. Shift+Enter makes a new line.");
+/* Preview */
+.preview{
+  position:relative;
+  min-height:220px;
+  border-radius:18px;
+  border:1px solid rgba(120,130,255,.28);
+  background: rgba(8,10,18,.28);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
 }
+.preview img{
+  max-width:100%;
+  max-height:100%;
+  display:none;
+}
+.preview-placeholder{color:var(--muted); font-weight:900}
+
+/* Modal */
+.modal-bg{
+  position:fixed; inset:0;
+  background: rgba(0,0,0,.55);
+  z-index:10;
+}
+.modal{
+  position:fixed;
+  top:50%; left:50%;
+  transform: translate(-50%,-50%);
+  width:min(560px, 92vw);
+  border-radius:18px;
+  border:1px solid rgba(120,130,255,.30);
+  background: rgba(10, 12, 22, .82);
+  box-shadow: 0 30px 120px rgba(0,0,0,.65);
+  backdrop-filter: blur(14px);
+  z-index:11;
+}
+.modal.hidden,.modal-bg.hidden{display:none}
+
+.modal-head{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:12px 14px; border-bottom:1px solid rgba(255,255,255,.10);
+}
+.modal-title{font-weight:1000; font-size:14px}
+.modal-body{padding:14px; display:flex; flex-direction:column; gap:10px}
+
+.warning{
+  border-radius:16px;
+  border:1px solid rgba(245,158,11,.30);
+  background: rgba(245,158,11,.10);
+  padding:10px 12px;
+  color:#fde68a;
+  font-weight:900;
+}
+
+/* =========================
+   LIGHT MODE (NOT WASHED OUT)
+   ========================= */
+body.light{
+  color: var(--lightText);
+}
+body.light .bg{
+  background:
+    radial-gradient(900px 700px at 20% 20%, rgba(37,99,235,.20), transparent 60%),
+    radial-gradient(900px 700px at 80% 70%, rgba(124,58,237,.16), transparent 60%),
+    linear-gradient(135deg, var(--lightBgA), var(--lightBgB));
+}
+body.light .bg::before{ opacity:.55; filter: blur(70px); }
+body.light .bg::after{ opacity:.07; }
+body.light .stars{opacity:.16}
+body.light .glass{
+  background: linear-gradient(180deg, rgba(255,255,255,.78), rgba(255,255,255,.62));
+  border: 1px solid var(--lightBorder);
+  box-shadow: 0 18px 60px rgba(15,23,42,.14);
+}
+body.light .brand-sub{ color: var(--lightMuted); }
+body.light .hint, body.light .label, body.light .card .sub{ color: var(--lightMuted); }
+
+body.light .input,
+body.light .select,
+body.light .textarea{
+  background: rgba(255,255,255,.82);
+  color: var(--lightText);
+  border: 1px solid rgba(30,64,175,.20);
+}
+body.light .detail{
+  background: rgba(219,234,254,.55);
+  border: 1px solid rgba(37,99,235,.22);
+  color:#0f172a;
+}
+body.light .tab{
+  background: rgba(219,234,254,.70);
+  color: #1e3a8a;
+  border-color: rgba(30,64,175,.20);
+}
+body.light .tab.active{
+  background: rgba(124,58,237,.14);
+  border-color: rgba(124,58,237,.24);
+}
+body.light .btn{
+  background: rgba(219,234,254,.70);
+  color: #1e3a8a;
+  border-color: rgba(30,64,175,.18);
+}
+body.light .chat{
+  background: rgba(255,255,255,.60);
+  border: 1px solid rgba(30,64,175,.18);
+}
+body.light .bubble.user{ background: rgba(37,99,235,.10); border-color: rgba(37,99,235,.18); }
+body.light .bubble.assistant{ background: rgba(124,58,237,.10); border-color: rgba(124,58,237,.18); }
+body.light .preview{ background: rgba(255,255,255,.55); border-color: rgba(30,64,175,.18); }
+
+@media (max-width: 980px){
+  .layout{grid-template-columns: 1fr;}
+  .grid{grid-template-columns: 1fr;}
+}
+
 init();
 
