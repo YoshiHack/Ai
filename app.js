@@ -7,7 +7,7 @@
 // ✅ Enter = Run, Shift+Enter = newline
 // ======================================================
 
-const AI_BASE_URL = "https://ai.hackclub.com/proxy/v1";
+const AI_BASE_URL = "aiproxy.jwhughes2012.workers.dev/proxy";
 const CHAT_COMPLETIONS_URL = `${AI_BASE_URL}/chat/completions`;
 const SEARCH_BASE = "https://search.hackclub.com/res/v1";
 
